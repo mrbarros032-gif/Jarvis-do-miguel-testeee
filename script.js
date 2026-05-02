@@ -1,5 +1,15 @@
 const API_KEY = "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";
 
+const chat = document.getElementById("chat");
+
+function addMensagem(texto, tipo) {
+  const div = document.createElement("div");
+  div.classList.add("msg", tipo);
+  div.innerText = texto;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
 async function enviarMensagem(mensagemUsuario) {
   try {
     const resposta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -9,7 +19,7 @@ async function enviarMensagem(mensagemUsuario) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+        model: "openai/gpt-3.5-turbo",
         messages: [
           { role: "user", content: mensagemUsuario }
         ]
@@ -18,32 +28,25 @@ async function enviarMensagem(mensagemUsuario) {
 
     const dados = await resposta.json();
 
-    console.log("RESPOSTA DA API:", dados);
-
+    // MOSTRA ERRO NA TELA (MOBILE FRIENDLY)
     if (!resposta.ok) {
-      throw new Error(dados.error?.message || "Erro na API");
+      alert("ERRO DA API:\n" + JSON.stringify(dados, null, 2));
+      return "Erro na API.";
     }
 
-    if (!dados.choices || !dados.choices[0]) {
-      throw new Error("Resposta inválida da API");
+    const texto = dados?.choices?.[0]?.message?.content;
+
+    if (!texto) {
+      alert("RESPOSTA INVÁLIDA:\n" + JSON.stringify(dados, null, 2));
+      return "Resposta vazia da IA.";
     }
 
-    return dados.choices[0].message.content;
+    return texto;
 
   } catch (erro) {
-    console.log("ERRO COMPLETO:", erro);
+    alert("ERRO DE CONEXÃO:\n" + erro);
     return "Erro ao responder.";
   }
-}
-
-const chat = document.getElementById("chat");
-
-function addMensagem(texto, tipo) {
-  const div = document.createElement("div");
-  div.classList.add("msg", tipo);
-  div.innerText = texto;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
 }
 
 document.getElementById("botao").addEventListener("click", async () => {
@@ -55,13 +58,10 @@ document.getElementById("botao").addEventListener("click", async () => {
   addMensagem(texto, "user");
   input.value = "";
 
-  const loading = document.createElement("div");
-  loading.classList.add("msg", "bot");
-  loading.innerText = "Pensando...";
-  chat.appendChild(loading);
+  addMensagem("Pensando...", "bot");
 
   const resposta = await enviarMensagem(texto);
 
-  loading.remove();
+  chat.lastChild.remove();
   addMensagem(resposta, "bot");
 });
