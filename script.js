@@ -1,4 +1,4 @@
-const API_KEY = "COLOQUE_SUA_NOVA_KEY_AQUI";
+const API_KEY = "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";
 
 const chat = document.getElementById("chat");
 
