@@ -28,9 +28,7 @@ async function enviarMensagem(mensagemUsuario) {
 
     const dados = await resposta.json();
 
-    console.log("DEBUG COMPLETO:", dados);
-
-    // ❌ ERRO DA API NO CHAT
+    // 🔥 ERRO DA API NO CHAT
     if (!resposta.ok) {
       addMensagem("❌ ERRO API:\n" + JSON.stringify(dados, null, 2), "bot");
       return "Erro na API.";
@@ -38,7 +36,7 @@ async function enviarMensagem(mensagemUsuario) {
 
     const texto = dados?.choices?.[0]?.message?.content;
 
-    // ❌ RESPOSTA INVÁLIDA
+    // 🔥 RESPOSTA INVÁLIDA
     if (!texto) {
       addMensagem("❌ RESPOSTA INVÁLIDA:\n" + JSON.stringify(dados, null, 2), "bot");
       return "Resposta inválida.";
@@ -47,13 +45,13 @@ async function enviarMensagem(mensagemUsuario) {
     return texto;
 
   } catch (erro) {
-    // ❌ ERRO DE REDE OU OUTRO
+    // 🔥 ERRO DE CONEXÃO
     addMensagem("❌ ERRO DE CONEXÃO:\n" + erro, "bot");
     return "Erro ao responder.";
   }
 }
 
-// BOTÃO
+// BOTÃO DE ENVIO
 document.getElementById("botao").addEventListener("click", async () => {
   const input = document.getElementById("input");
   const texto = input.value.trim();
