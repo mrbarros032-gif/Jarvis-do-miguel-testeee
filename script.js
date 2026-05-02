@@ -19,7 +19,7 @@ async function enviarMensagem(mensagemUsuario) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-3.5-turbo",
+        model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
         messages: [
           { role: "user", content: mensagemUsuario }
         ]
@@ -28,27 +28,32 @@ async function enviarMensagem(mensagemUsuario) {
 
     const dados = await resposta.json();
 
-    // MOSTRA ERRO NA TELA (MOBILE FRIENDLY)
+    console.log("DEBUG COMPLETO:", dados);
+
+    // ❌ ERRO DA API NO CHAT
     if (!resposta.ok) {
-      alert("ERRO DA API:\n" + JSON.stringify(dados, null, 2));
+      addMensagem("❌ ERRO API:\n" + JSON.stringify(dados, null, 2), "bot");
       return "Erro na API.";
     }
 
     const texto = dados?.choices?.[0]?.message?.content;
 
+    // ❌ RESPOSTA INVÁLIDA
     if (!texto) {
-      alert("RESPOSTA INVÁLIDA:\n" + JSON.stringify(dados, null, 2));
-      return "Resposta vazia da IA.";
+      addMensagem("❌ RESPOSTA INVÁLIDA:\n" + JSON.stringify(dados, null, 2), "bot");
+      return "Resposta inválida.";
     }
 
     return texto;
 
   } catch (erro) {
-    alert("ERRO DE CONEXÃO:\n" + erro);
+    // ❌ ERRO DE REDE OU OUTRO
+    addMensagem("❌ ERRO DE CONEXÃO:\n" + erro, "bot");
     return "Erro ao responder.";
   }
 }
 
+// BOTÃO
 document.getElementById("botao").addEventListener("click", async () => {
   const input = document.getElementById("input");
   const texto = input.value.trim();
@@ -62,6 +67,8 @@ document.getElementById("botao").addEventListener("click", async () => {
 
   const resposta = await enviarMensagem(texto);
 
+  // remove "Pensando..."
   chat.lastChild.remove();
+
   addMensagem(resposta, "bot");
 });
