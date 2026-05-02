@@ -1,4 +1,4 @@
-const API_KEY = "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";
+const API_KEY = "COLOQUE_SUA_NOVA_KEY_AQUI";
 
 const chat = document.getElementById("chat");
 
@@ -28,9 +28,10 @@ async function enviarMensagem(mensagemUsuario) {
 
     const dados = await resposta.json();
 
-    // 🔥 ERRO DA API NO CHAT
+    // 🔥 MOSTRA STATUS HTTP
     if (!resposta.ok) {
-      addMensagem("❌ ERRO API:\n" + JSON.stringify(dados, null, 2), "bot");
+      addMensagem("❌ ERRO HTTP: " + resposta.status, "bot");
+      addMensagem("📦 DETALHE:\n" + JSON.stringify(dados, null, 2), "bot");
       return "Erro na API.";
     }
 
@@ -38,14 +39,14 @@ async function enviarMensagem(mensagemUsuario) {
 
     // 🔥 RESPOSTA INVÁLIDA
     if (!texto) {
-      addMensagem("❌ RESPOSTA INVÁLIDA:\n" + JSON.stringify(dados, null, 2), "bot");
+      addMensagem("❌ RESPOSTA INVÁLIDA DA API:\n" + JSON.stringify(dados, null, 2), "bot");
       return "Resposta inválida.";
     }
 
     return texto;
 
   } catch (erro) {
-    // 🔥 ERRO DE CONEXÃO
+    // 🔥 ERRO DE REDE OU FETCH
     addMensagem("❌ ERRO DE CONEXÃO:\n" + erro, "bot");
     return "Erro ao responder.";
   }
