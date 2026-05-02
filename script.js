@@ -1,79 +1,43 @@
-const API_KEY = "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";
+const API_KEY = "AIzaSyDd0CX2VG1yH8f4APd4Yqbvj1VVwrk3Yl0";
 
+// ===== CHAT =====
 const chat = document.getElementById("chat");
 
+// adiciona mensagem na tela
 function addMensagem(texto, tipo) {
   const div = document.createElement("div");
-  div.classList.add("msg", tipo);
+  div.className = tipo;
   div.innerText = texto;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }
 
-/* =========================
-   🔥 FILA DE MENSAGENS
-========================= */
-
+// ===== CONTROLE =====
 let fila = [];
 let processando = false;
-let podeEnviar = true;
+let bloqueado = false;
 
-/* =========================
-   ➕ ENTRAR NA FILA
-========================= */
-function adicionarNaFila(texto) {
+// ===== BOTÃO =====
+document.getElementById("botao").addEventListener("click", () => {
+  const input = document.getElementById("input");
+  const texto = input.value.trim();
+
+  if (!texto) return;
+
+  input.value = "";
   fila.push(texto);
+
   processarFila();
-}
+});
 
-/* =========================
-   🔁 RETRY DA API
-========================= */
-async function enviarComRetry(mensagem, tentativas = 2) {
-  for (let i = 0; i < tentativas; i++) {
-    try {
-      const resposta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "qwen/qwen3-coder:free",
-          messages: [
-            { role: "user", content: mensagem }
-          ]
-        })
-      });
-
-      const dados = await resposta.json();
-
-      if (!resposta.ok) {
-        throw new Error(JSON.stringify(dados));
-      }
-
-      return dados.choices?.[0]?.message?.content;
-
-    } catch (err) {
-      console.log("Retry:", i + 1);
-
-      await new Promise(r => setTimeout(r, 2000));
-    }
-  }
-
-  return "❌ Falhou após várias tentativas.";
-}
-
-/* =========================
-   📬 PROCESSAR FILA
-========================= */
+// ===== FILA =====
 async function processarFila() {
   if (processando) return;
   processando = true;
 
   while (fila.length > 0) {
 
-    if (!podeEnviar) {
+    if (bloqueado) {
       await new Promise(r => setTimeout(r, 1000));
       continue;
     }
@@ -85,28 +49,59 @@ async function processarFila() {
 
     const resposta = await enviarComRetry(mensagem);
 
+    // remove "pensando..."
     chat.lastChild.remove();
+
     addMensagem(resposta, "bot");
 
-    // 🔥 COOLDOWN 5s
-    podeEnviar = false;
+    // cooldown de 5s
+    bloqueado = true;
     await new Promise(r => setTimeout(r, 5000));
-    podeEnviar = true;
+    bloqueado = false;
   }
 
   processando = false;
 }
 
-/* =========================
-   🔘 BOTÃO
-========================= */
-document.getElementById("botao").addEventListener("click", () => {
-  const input = document.getElementById("input");
-  const texto = input.value.trim();
+// ===== GEMINI REQUEST =====
+async function enviarMensagem(texto) {
+  const resposta = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: texto }]
+          }
+        ]
+      })
+    }
+  );
 
-  if (!texto) return;
+  const dados = await resposta.json();
 
-  input.value = "";
+  if (!resposta.ok) {
+    throw new Error(JSON.stringify(dados));
+  }
 
-  adicionarNaFila(texto);
-});
+  return dados?.candidates?.[0]?.content?.parts?.[0]?.text
+    || "Sem resposta da IA";
+}
+
+// ===== RETRY =====
+async function enviarComRetry(texto, tentativas = 2) {
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      return await enviarMensagem(texto);
+    } catch (err) {
+      console.log("Retry:", i + 1);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  return "❌ Falhou após várias tentativas.";
+                }
