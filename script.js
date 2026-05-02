@@ -1,22 +1,39 @@
 const API_KEY = "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";
 
 async function enviarMensagem(mensagemUsuario) {
-  const resposta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${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}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-      messages: [
-        { role: "user", content: mensagemUsuario }
-      ]
-    })
-  });
+  try {
+    const resposta = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+        messages: [
+          { role: "user", content: mensagemUsuario }
+        ]
+      })
+    });
 
-  const dados = await resposta.json();
-  return dados.choices[0].message.content;
+    const dados = await resposta.json();
+
+    console.log("RESPOSTA DA API:", dados);
+
+    if (!resposta.ok) {
+      throw new Error(dados.error?.message || "Erro na API");
+    }
+
+    if (!dados.choices || !dados.choices[0]) {
+      throw new Error("Resposta inválida da API");
+    }
+
+    return dados.choices[0].message.content;
+
+  } catch (erro) {
+    console.log("ERRO COMPLETO:", erro);
+    return "Erro ao responder.";
+  }
 }
 
 const chat = document.getElementById("chat");
@@ -31,7 +48,7 @@ function addMensagem(texto, tipo) {
 
 document.getElementById("botao").addEventListener("click", async () => {
   const input = document.getElementById("input");
-  const texto = input.value;
+  const texto = input.value.trim();
 
   if (!texto) return;
 
@@ -43,12 +60,8 @@ document.getElementById("botao").addEventListener("click", async () => {
   loading.innerText = "Pensando...";
   chat.appendChild(loading);
 
-  try {
-    const resposta = await enviarMensagem(texto);
-    loading.remove();
-    addMensagem(resposta, "bot");
-  } catch (erro) {
-    loading.innerText = "Erro ao responder.";
-    console.log(erro);
-  }
+  const resposta = await enviarMensagem(texto);
+
+  loading.remove();
+  addMensagem(resposta, "bot");
 });
