@@ -1,4 +1,4 @@
-const API_KEY = "AIzaSyCvU1vzUC4A66IF-XR1hTG07q390ND3UNE";
+const BACKEND_URL = "https://SEU-WORKER-NAME.workers.dev"; // ← TROQUE PELO SEU URL DO CLOUDFLARE AQUI
 
 // ===== CHAT =====
 const chat = document.getElementById("chat");
@@ -6,7 +6,7 @@ const chat = document.getElementById("chat");
 // adiciona mensagem na tela
 function addMensagem(texto, tipo) {
   const div = document.createElement("div");
-  div.className = tipo;
+  div.className = `msg ${tipo}`;
   div.innerText = texto;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
@@ -22,11 +22,10 @@ document.getElementById("botao").addEventListener("click", () => {
   const input = document.getElementById("input");
   const texto = input.value.trim();
 
-  if (!texto) return;
+  if (!texto || bloqueado) return;
 
   input.value = "";
   fila.push(texto);
-
   processarFila();
 });
 
@@ -36,25 +35,27 @@ async function processarFila() {
   processando = true;
 
   while (fila.length > 0) {
-
     if (bloqueado) {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 500));
       continue;
     }
 
     const mensagem = fila.shift();
 
     addMensagem(mensagem, "user");
-    addMensagem("Pensando...", "bot");
+
+    const pensando = document.createElement("div");
+    pensando.className = "msg bot";
+    pensando.textContent = "Pensando...";
+    chat.appendChild(pensando);
+    chat.scrollTop = chat.scrollHeight;
 
     const resposta = await enviarComRetry(mensagem);
 
-    // remove "pensando..."
-    chat.lastChild.remove();
-
+    pensando.remove();
     addMensagem(resposta, "bot");
 
-    // cooldown de 5s
+    // cooldown anti-spam de 5 segundos
     bloqueado = true;
     await new Promise(r => setTimeout(r, 5000));
     bloqueado = false;
@@ -63,45 +64,29 @@ async function processarFila() {
   processando = false;
 }
 
-// ===== GEMINI REQUEST =====
+// ===== ENVIO PARA BACKEND SEGURO =====
 async function enviarMensagem(texto) {
-  const resposta = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: texto }]
-          }
-        ]
-      })
-    }
-  );
+  const res = await fetch(`${BACKEND_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: texto })
+  });
 
-  const dados = await resposta.json();
+  if (!res.ok) throw new Error("Erro na API");
 
-  if (!resposta.ok) {
-    throw new Error(JSON.stringify(dados));
-  }
-
-  return dados?.candidates?.[0]?.content?.parts?.[0]?.text
-    || "Sem resposta da IA";
+  const data = await res.json();
+  return data.reply || "Sem resposta da IA";
 }
 
-// ===== RETRY =====
-async function enviarComRetry(texto, tentativas = 2) {
+// ===== RETRY AUTOMÁTICO =====
+async function enviarComRetry(texto, tentativas = 3) {
   for (let i = 0; i < tentativas; i++) {
     try {
       return await enviarMensagem(texto);
     } catch (err) {
-      console.log("Retry:", i + 1);
-      await new Promise(r => setTimeout(r, 2000));
+      console.log(`Tentativa ${i+1} falhou`);
+      await new Promise(r => setTimeout(r, 1500));
     }
   }
-
-  return "❌ Falhou após várias tentativas.";
-                }
+  return "❌ Não consegui responder agora. Tente novamente mais tarde.";
+}
